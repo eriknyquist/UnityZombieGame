@@ -29,12 +29,20 @@ public class Bullet : MonoBehaviour
         else
         {
             audioSource.PlayOneShot(wallSound, 0.2f);
-            BuildableWall wall = collided.GetComponent<BuildableWall>();
+            //BuildableWall wall = collided.GetComponent<BuildableWall>();
             
             // Did we hit a buildable wall?
-            if (null != wall)
+            //if (null != wall)
+            //{
+            //    wall.BulletHit();
+            //}
+            
+            if (collided.transform.parent != null)
             {
-                wall.BulletHit();
+                if (collided.transform.parent.gameObject.tag == "DestructibleBlock")
+                {
+                    Destroy(collided.transform.gameObject);
+                }
             }
         }
         

@@ -13,6 +13,7 @@ TagManager:
   - Zombie
   - Health
   - SprintBar
+  - DestructibleBlock
   layers:
   - Default
   - TransparentFX

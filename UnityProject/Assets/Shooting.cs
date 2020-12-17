@@ -19,7 +19,7 @@ public class Shooting : MonoBehaviour
     public GameObject bulletPrefab;
     
     // Projectile initial force when spawned
-    public float bulletForce = 10f;
+    public float bulletForce = 1f;
 
     // Audio clip to play when firing projectile
     public AudioClip gunSound;
@@ -54,7 +54,7 @@ public class Shooting : MonoBehaviour
     {        
         if (Input.GetMouseButtonDown(0))
         {
-            InvokeRepeating("FireBullet", 0, 0.075f);
+            InvokeRepeating("FireBullet", 0, 0.1f);
         }
         else if (Input.GetMouseButtonUp(0))
         {
