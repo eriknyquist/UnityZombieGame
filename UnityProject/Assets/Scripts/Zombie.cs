@@ -114,12 +114,14 @@ public class Zombie : MonoBehaviour
 
     void EnableBlood()
     {
-        blood.enableEmission = true;
+        ParticleSystem.EmissionModule em = blood.emission;
+        em.enabled = true;
     }
 
     void DisableBlood()
     {
-        blood.enableEmission = false;
+        ParticleSystem.EmissionModule em = blood.emission;
+        em.enabled = false;
     }
 
     /* Used when a zombie is in the State.IDLE state, to do multiple raycasts in a 180
