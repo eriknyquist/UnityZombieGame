@@ -13,10 +13,19 @@ using UnityEngine.SceneManagement;
 
 public class PlayerCollisions : MonoBehaviour
 {
+    /* Grace period after a player collides with an enemy, during which no damage can be taken */
     public int coolOffSeconds = 1;
+
+    /* Player sprite flashing speed when in cool-off, in seconds */
     public float coolOffFlashDelay = 0.1f;
+
+    /* Audio clip to play when we pick up ammo */
     public AudioClip ammoPickupSound;
+
+    /* Audio clip to play when we pick up health */
     public AudioClip healthPickupSound;
+
+    /* Audio clip to play when we take damage */
     public AudioClip playerHitSound;
 
     AudioSource audioSource;

@@ -1,7 +1,13 @@
-﻿using System.Collections;
+﻿/*
+ * Zombie.cs
+ * 
+ * Handles controlling a zombie and making it move around the game world to
+ * pursue to player.
+ */
+
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
 
 public class Zombie : MonoBehaviour
 {

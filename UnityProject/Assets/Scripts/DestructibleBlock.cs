@@ -1,9 +1,20 @@
-﻿using System.Collections;
+﻿/*
+ * DestructibleBlock.cs
+ *
+ * A single destructible block is made of multiple smaller individual blocks. This
+ * script provides an API for performing some common operations on all of the individual
+ * child blocks of a single destructible block.
+ */
+
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class DestructibleBlock : MonoBehaviour
 {
+    /*
+     * Disable the box collider of all child blocks
+     */
     public void disableColliders()
     {
         foreach (Transform child in gameObject.transform)
@@ -13,6 +24,9 @@ public class DestructibleBlock : MonoBehaviour
         }
     }
 
+    /*
+     * Enable the box collider of all child blocks
+     */
     public void enableColliders()
     {
         foreach (Transform child in gameObject.transform)
@@ -22,16 +36,9 @@ public class DestructibleBlock : MonoBehaviour
         }
     }
 
-    public void setAlpha(float alpha)
-    {
-        foreach (Transform child in gameObject.transform)
-        {
-            Color color = child.GetComponent<SpriteRenderer>().material.color;
-            color.a = alpha;
-            child.GetComponent<SpriteRenderer>().material.color = color;
-        }
-    }
-
+    /*
+     * Set the color of all child blocks
+     */
     public void setColor(Color color)
     {
         foreach (Transform child in gameObject.transform)
@@ -40,6 +47,9 @@ public class DestructibleBlock : MonoBehaviour
         }
     }
 
+    /*
+     * Get the color of the first child block
+     */
     public Color getColor()
     {
         Color color = Color.red;

@@ -1,4 +1,11 @@
-﻿using System.Collections;
+﻿/*
+ * Pickup.cs
+ *
+ * Attached to pickup items that recharge after a certain amount of time.
+ * Handles disabling the gameobject and re-enabling after the recharge time has elapsed.
+ */
+
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 

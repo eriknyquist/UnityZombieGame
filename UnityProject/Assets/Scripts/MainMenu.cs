@@ -1,4 +1,10 @@
-﻿using System.Collections;
+﻿/*
+ * MainMenu.cs
+ *
+ * Implements actions for main menu buttons
+ */
+
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;

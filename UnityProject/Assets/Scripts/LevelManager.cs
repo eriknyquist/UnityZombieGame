@@ -1,4 +1,11 @@
-﻿using System.Collections;
+﻿/*
+ * LevelManager.cs
+ *
+ * Handles spawning zombies evenly across all all spawn points, and limiting the
+ * number of zombies that can be spawned at one time.
+ */
+
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -6,22 +13,22 @@ using UnityEngine;
 public class LevelManager : MonoBehaviour
 {
     public List<GameObject> spawnPoints = new List<GameObject>();
-    
+
     // Delay in seconds between rounds
     public float roundDelaySecs = 2;
-    
+
     // Delay between each new zombie spawn
     public float zombieSpawnDelaySecs = 0.1f;
-    
+
     int maxActiveZombies = 0;
     int maxTotalSpawns = 0; // Total number of zombies spawns allowed for this round
     int totalSpawns = 0;    // Total number of zombies spawned this level
     int activeZombies = 0;  // Current number of zombies spawned
     int level = 0;          // Current level
     int kills = 0;          // Number of kills so far in this level
-    
+
     int spawnPointIndex = 0;
-    
+
     object[][] LevelData = new object[][] {
         //            Total zombie     Max. zombies     Max. ammo
         //            spawns           at once
@@ -35,7 +42,7 @@ public class LevelManager : MonoBehaviour
         //new object[] {700,             200,             200},
         new object[] {1000,            200,             250},
     };
-    
+
     PlayerHUD playerHUD;
 
     // Start is called before the first frame update
@@ -43,15 +50,15 @@ public class LevelManager : MonoBehaviour
     {
         GameObject hud = GameObject.FindGameObjectWithTag("PlayerHUD");
         playerHUD = hud.GetComponent<PlayerHUD>();
-        
+
         foreach (var obj in spawnPoints)
         {
         }
-        
+
         maxTotalSpawns = (int)LevelData[0][0];
         maxActiveZombies = (int)LevelData[0][1];
         int maxAmmo = (int)LevelData[0][2];
-        
+
         playerHUD.ammoCounter.maxAmmo = maxAmmo;
         InvokeRepeating("ZombieSpawnTask", 0, zombieSpawnDelaySecs);
     }
@@ -64,7 +71,7 @@ public class LevelManager : MonoBehaviour
             CancelInvoke("ZombieSpawnTask");
             return;
         }
-        
+
         ZombieSpawner point = spawnPoints[spawnPointIndex].GetComponent<ZombieSpawner>();
         point.SpawnZombie();
 
@@ -72,12 +79,12 @@ public class LevelManager : MonoBehaviour
         totalSpawns += 1;
         spawnPointIndex = (spawnPointIndex + 1) % spawnPoints.Count;
     }
-    
+
     public void ZombieKilled()
     {
         kills += 1;
         activeZombies -= 1;
-        
+
         // Was the last zombie killed?
         if ((int)LevelData[level][0] == kills)
         {
@@ -88,11 +95,11 @@ public class LevelManager : MonoBehaviour
             InvokeRepeating("ZombieSpawnTask", 0, zombieSpawnDelaySecs);
         }
     }
-    
+
     public void LevelUp()
     {
         level = (level + 1) % LevelData.Length;
-    
+
         maxTotalSpawns = (int)LevelData[level][0];
         maxActiveZombies = (int)LevelData[level][1];
         int maxAmmo = (int)LevelData[level][2];

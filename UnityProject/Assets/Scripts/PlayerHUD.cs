@@ -1,4 +1,11 @@
-﻿using System.Collections;
+﻿/*
+ * PlayerHUD.cs
+ *
+ * Attached to the top-level PlayerHUD prefab, handles moving the HUD objects
+ * around to follow the player
+ */
+
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -12,7 +19,7 @@ public class PlayerHUD : MonoBehaviour
 
     // Offset from player's position
     Vector3 offset = new Vector3(0.0f, -3.8f, 0.0f);
-    
+
     Vector3 pivotOffset;
 
     // Start is called before the first frame update
