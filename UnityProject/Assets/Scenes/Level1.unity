@@ -319,6 +319,36 @@ PrefabInstance:
       propertyPath: bulletForce
       value: 30
       objectReference: {fileID: 0}
+    - target: {fileID: 2491993152316216355, guid: 7343c374f93c3dd4fb556df1a083d6a1,
+        type: 3}
+      propertyPath: gunshotReverbSound
+      value: 
+      objectReference: {fileID: 8300000, guid: 531280eb31c539e48880d3d2fc77a5de, type: 3}
+    - target: {fileID: 2491993152316216355, guid: 7343c374f93c3dd4fb556df1a083d6a1,
+        type: 3}
+      propertyPath: gunshotSounds.Array.size
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 2491993152316216355, guid: 7343c374f93c3dd4fb556df1a083d6a1,
+        type: 3}
+      propertyPath: gunshotSounds.Array.data[0]
+      value: 
+      objectReference: {fileID: 8300000, guid: 3d32350db83b46b49a26d3f7259118a0, type: 3}
+    - target: {fileID: 2491993152316216355, guid: 7343c374f93c3dd4fb556df1a083d6a1,
+        type: 3}
+      propertyPath: gunshotSounds.Array.data[1]
+      value: 
+      objectReference: {fileID: 8300000, guid: 4e3d9c919742be04aad9eb9446b14e2c, type: 3}
+    - target: {fileID: 2491993152316216355, guid: 7343c374f93c3dd4fb556df1a083d6a1,
+        type: 3}
+      propertyPath: gunshotSounds.Array.data[2]
+      value: 
+      objectReference: {fileID: 8300000, guid: fff6e6dbce3298740944d1502e114f14, type: 3}
+    - target: {fileID: 2491993152316216355, guid: 7343c374f93c3dd4fb556df1a083d6a1,
+        type: 3}
+      propertyPath: gunshotSounds.Array.data[3]
+      value: 
+      objectReference: {fileID: 8300000, guid: 389a4adf56c276e45a46b5e14ac8d9df, type: 3}
     - target: {fileID: 2491993152316216356, guid: 7343c374f93c3dd4fb556df1a083d6a1,
         type: 3}
       propertyPath: m_RootOrder
@@ -409,6 +439,11 @@ PrefabInstance:
       propertyPath: m_audioClip
       value: 
       objectReference: {fileID: 8300000, guid: 635a9f0a3ff909642ad1a5ad414c9278, type: 3}
+    - target: {fileID: 6111847424939889751, guid: 7343c374f93c3dd4fb556df1a083d6a1,
+        type: 3}
+      propertyPath: BypassListenerEffects
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7343c374f93c3dd4fb556df1a083d6a1, type: 3}
 --- !u!1 &176589717

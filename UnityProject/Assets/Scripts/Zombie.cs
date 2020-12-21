@@ -1,6 +1,6 @@
 ﻿/*
  * Zombie.cs
- * 
+ *
  * Handles controlling a zombie and making it move around the game world to
  * pursue to player.
  */
@@ -49,6 +49,15 @@ public class Zombie : MonoBehaviour
      * the zombie to find the best direction to face, this often */
     public const float secondsBetweenRaycastSweeps = 0.5f;
 
+    // Max. time a zombie is allowed to stay in the TRACKING_BLINDLY state
+    public float maxTrackingBlindlySeconds = 0.2f;
+
+    // List of Zombies currently following this zombie
+    public List<GameObject> followers = new List<GameObject>();
+
+    // Timestamp of last entry into TRACKING_BLINDLY state
+    float trackingBlindlyEntryTime = -1.0f;
+
     // Reference to player gameobject
     Transform player;
 
@@ -61,6 +70,9 @@ public class Zombie : MonoBehaviour
     // Min. wall distance before zombie will turn away
     const float WALL_BOUNDARY = 1f;
 
+    GameObject leaderZombie;
+    Zombie leaderZombieScript;
+
     float lastPlayerRaycastTime = 0.0f;
     float lastRaycastSweepTime = 0.0f;
     BoxCollider2D boxCollider;
@@ -72,9 +84,60 @@ public class Zombie : MonoBehaviour
     ParticleSystem blood;
     Quaternion idleLookDirection;
 
-    public GameObject buddyZombie;
-    Zombie buddyZombieScript;
     public RaycastHitType hitType = RaycastHitType.NO_LOS;
+
+    public void addFollower(GameObject follower)
+    {
+        followers.Add(follower);
+    }
+
+    public void removeFollower(GameObject follower)
+    {
+        followers.Remove(follower);
+    }
+
+    public void stopFollowing()
+    {
+        if (leaderZombieScript != null)
+        {
+            leaderZombieScript.removeFollower(gameObject);
+            leaderZombie = null;
+            leaderZombieScript = null;
+        }
+
+        state = State.IDLE;
+        trackingBlindlyEntryTime = -1.0f;
+    }
+
+    public void dropFollowers()
+    {
+        List<GameObject> zombiesToDrop = new List<GameObject>();
+
+        // Add ourself to the list to start off
+        zombiesToDrop.Add(gameObject);
+
+        /* Can't call dropFollowers on follower zombies, might cause stack overflow.
+         * Need to maintain our own stack of zombies to drop instead. */
+        while (zombiesToDrop.Count > 0)
+        {
+            // Pop the next item
+            GameObject zombie = zombiesToDrop[0];
+            zombiesToDrop.RemoveAt(0);
+
+            if (zombie != null)
+            {
+                // Make this zombie stop following
+                Zombie zombieScript = zombie.GetComponent<Zombie>();
+                zombieScript.stopFollowing();
+
+                // Add this zombie's followers to our stack
+                zombiesToDrop.AddRange(zombieScript.followers);
+
+                // Clear this zombie's followers list
+                zombieScript.followers.Clear();
+            }
+        }
+    }
 
     public void SetRotationAngle(float angle)
     {
@@ -183,10 +246,11 @@ public class Zombie : MonoBehaviour
                 Zombie otherZombie = hit.transform.gameObject.GetComponent<Zombie>();
                 if (State.IDLE != otherZombie.state)
                 {
-                    if (buddyZombie == null)
+                    if (leaderZombie == null)
                     {
-                        buddyZombie = hit.transform.gameObject;
-                        buddyZombieScript = buddyZombie.GetComponent<Zombie>();
+                        leaderZombie = hit.transform.gameObject;
+                        leaderZombieScript = leaderZombie.GetComponent<Zombie>();
+                        leaderZombieScript.addFollower(gameObject);
                         state = State.TRACKING_BLINDLY;
                     }
 
@@ -233,10 +297,11 @@ public class Zombie : MonoBehaviour
             }
             else if ((State.TRACKING == otherZombie.state) || (State.TRACKING_BLINDLY == otherZombie.state))
             {
-                if (buddyZombie == null)
+                if (leaderZombie == null)
                 {
-                    buddyZombie = hit.transform.gameObject;
-                    buddyZombieScript = buddyZombie.GetComponent<Zombie>();
+                    leaderZombie = hit.transform.gameObject;
+                    leaderZombieScript = leaderZombie.GetComponent<Zombie>();
+                    leaderZombieScript.addFollower(gameObject);
                 }
 
                 return RaycastHitType.TRACKING_LOS;
@@ -374,47 +439,86 @@ public class Zombie : MonoBehaviour
                 break;
 
             case State.TRACKING_BLINDLY:
-                if ((buddyZombieScript == null) || buddyZombieScript.killed || (State.IDLE == buddyZombieScript.state))
+                if ((leaderZombieScript == null) || leaderZombieScript.killed || (State.IDLE == leaderZombieScript.state))
                 {
-                    buddyZombie = null;
-                    buddyZombieScript = null;
-                    state = State.IDLE;
+                    // Leader zombie was destroyed or killed-- drop all followers, go to idle state
+                    dropFollowers();
+                    break;
+                }
+
+                if (trackingBlindlyEntryTime < 0.0f)
+                {
+                    trackingBlindlyEntryTime = Time.time;
+                }
+
+                if (maxTrackingBlindlySeconds <= (Time.time - trackingBlindlyEntryTime))
+                {
+                    // Time is up, drop all followers and back to idle state
+                    Debug.Log("TIME IS UP!");
+                    dropFollowers();
                     break;
                 }
 
                 if (RaycastHitType.PLAYER_LOS == hitType)
                 {
-                    buddyZombie = null;
-                    buddyZombieScript = null;
+                    // We can see the player-- keep followers but move to PURSUING
+                    leaderZombieScript.removeFollower(gameObject);
+                    leaderZombie = null;
+                    leaderZombieScript = null;
+                    trackingBlindlyEntryTime = -1.0f;
                     state = State.PURSUING;
                     break;
                 }
                 else if (RaycastHitType.PURSUING_LOS == hitType)
                 {
-                    buddyZombie = null;
-                    buddyZombieScript = null;
+                    // We can see a PURSUING zombie-- keep followers but move to PURSUING_BLINDLY
+                    leaderZombieScript.removeFollower(gameObject);
+                    leaderZombie = null;
+                    leaderZombieScript = null;
+                    trackingBlindlyEntryTime = -1.0f;
                     state = State.PURSUING_BLINDLY;
                     break;
                 }
 
                 // Do we still have line-of-sight to our buddy zombie?
                 boxCollider.enabled = false;
-                RaycastHit2D buddyHit = Physics2D.Linecast(gameObject.transform.position, buddyZombie.transform.position);
+                RaycastHit2D buddyHit = Physics2D.Linecast(gameObject.transform.position, leaderZombie.transform.position);
                 boxCollider.enabled = true;
 
-                // Uncomment for debugging
+                // (Uncomment for debugging)
                 Debug.DrawLine(gameObject.transform.position, buddyHit.point, Color.red);
 
-                if ((buddyZombie == null) || !Object.ReferenceEquals(buddyZombie, buddyHit.transform.gameObject))
+                if (leaderZombie == null)
                 {
-                    // No. back to idle state.
-                    buddyZombie = null;
-                    buddyZombieScript = null;
-                    state = State.IDLE;
+                    // Buddy zombie was destroyed/killed, drop followers and go back to idle state.;
+                    dropFollowers();
                     break;
                 }
 
-                LookTowardsPosition(buddyZombie.transform.position);
+                if (!Object.ReferenceEquals(leaderZombie, buddyHit.transform.gameObject))
+                {
+                    // We do not have line of sight to buddy zombie. Did our linecast
+                    // hit another zombie that is doing zomething interesting?
+                    if (buddyHit.transform.gameObject.tag == "Zombie")
+                    {
+                        Zombie otherZombie = buddyHit.transform.gameObject.GetComponent<Zombie>();
+                        if (otherZombie.state != State.IDLE)
+                        {
+                            // Make this guy our new leader
+                            leaderZombieScript.removeFollower(gameObject);
+                            leaderZombie = buddyHit.transform.gameObject;
+                            leaderZombieScript = otherZombie;
+                            leaderZombieScript.addFollower(gameObject);
+                            break;
+                        }
+                    }
+
+                    // No other interesting zombies to follow, back to idle state
+                    dropFollowers();
+                    break;
+                }
+
+                LookTowardsPosition(leaderZombie.transform.position);
                 MoveForwards(FAST_SPEED);
                 break;
 
@@ -429,11 +533,7 @@ public class Zombie : MonoBehaviour
                     state = State.PURSUING;
                     break;
                 }
-                else if (RaycastHitType.TRACKING_LOS == hitType)
-                {
-                    state = State.TRACKING_BLINDLY;
-                    break;
-                }
+
                 // Do we still have line-of-sight to last seen player position?
                 boxCollider.enabled = false;
                 RaycastHit2D trackingHit = Physics2D.Linecast(gameObject.transform.position, lastSeenPlayerPos);
