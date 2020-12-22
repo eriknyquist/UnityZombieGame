@@ -129,8 +129,10 @@ MonoBehaviour:
   hp: 2
   state: 0
   killed: 0
-  maxTrackingBlindlySeconds: 3
+  maxTrackingBlindlySeconds: 10
   followers: []
+  leaderZombie: {fileID: 0}
+  leaderZombieScript: {fileID: 0}
   hitType: 3
 --- !u!50 &-3220927684613150852
 Rigidbody2D:

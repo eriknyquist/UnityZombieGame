@@ -18,6 +18,7 @@ public class Zombie : MonoBehaviour
         PURSUING,         // Following player with line of sight
         PURSUING_BLINDLY, // Following a zombie that has line-of-sight to the player
         TRACKING_BLINDLY, // Following a zombie that is in the TRACKING state
+        DESTRUCTION,      // Destroying something the player built
         TRACKING          // Moving toward player's last seen position
     }
 
@@ -25,10 +26,10 @@ public class Zombie : MonoBehaviour
     /* Enumeration of possible results from a linecast from zombie to player */
     public enum RaycastHitType
     {
-        PLAYER_LOS,    // Zombie has line-of-sight to player
-        PURSUING_LOS,  // Line-of-sight to player is being blocked by a pursuing zombie
-        TRACKING_LOS,  // Zombie has line of sight to another zombie in the TRACKING state
-        NO_LOS         // Can't see nuthin good
+        PLAYER_LOS,         // Have line-of-sight to player
+        PURSUING_LOS,       // Line-of-sight to player is being blocked by a pursuing zombie
+        TRACKING_LOS,       // Have line of sight to another zombie in the TRACKING state
+        NO_LOS              // Can't see nuthin good
     }
 
     // Constant velocity damping value
@@ -50,10 +51,18 @@ public class Zombie : MonoBehaviour
     public const float secondsBetweenRaycastSweeps = 0.5f;
 
     // Max. time a zombie is allowed to stay in the TRACKING_BLINDLY state
-    public float maxTrackingBlindlySeconds = 0.2f;
+    public float maxTrackingBlindlySeconds = 10.0f;
 
     // List of Zombies currently following this zombie
     public List<GameObject> followers = new List<GameObject>();
+
+    // The zombie gameobject we are currently following
+    public GameObject leaderZombie = null;
+
+    // The Zombie class instance we are currently following
+    public Zombie leaderZombieScript = null;
+
+    GameObject trackedBlock = null;
 
     // Timestamp of last entry into TRACKING_BLINDLY state
     float trackingBlindlyEntryTime = -1.0f;
@@ -69,9 +78,6 @@ public class Zombie : MonoBehaviour
 
     // Min. wall distance before zombie will turn away
     const float WALL_BOUNDARY = 1f;
-
-    GameObject leaderZombie;
-    Zombie leaderZombieScript;
 
     float lastPlayerRaycastTime = 0.0f;
     float lastRaycastSweepTime = 0.0f;
@@ -156,6 +162,37 @@ public class Zombie : MonoBehaviour
             Death();
         }
     }
+
+    bool isWorthFollowing(Zombie otherZombie)
+    {
+        const int maxHopsToLeader = 6;
+        Zombie currZombie = otherZombie;
+
+        for (int hops = 0; hops < maxHopsToLeader + 1; hops++)
+        {
+            if (currZombie.leaderZombieScript == null)
+            {
+                return false;
+            }
+
+            if ((currZombie.state == State.PURSUING) ||
+                (currZombie.state == State.PURSUING_BLINDLY) ||
+                (currZombie.state == State.TRACKING))
+            {
+                /* Found a zombie that is actually following/tracking something within
+                 * N hops, this zombie is worth following. */
+                return true;
+            }
+            else
+            {
+                // Check the next zombie up the chain
+                currZombie = currZombie.leaderZombieScript;
+            }
+        }
+
+        return false;
+    }
+
 
     void DestroyZombie()
     {
@@ -244,19 +281,38 @@ public class Zombie : MonoBehaviour
             if ("Zombie" == hit.transform.gameObject.tag)
             {
                 Zombie otherZombie = hit.transform.gameObject.GetComponent<Zombie>();
-                if (State.IDLE != otherZombie.state)
+                if ((otherZombie.state == State.PURSUING) ||
+                    (otherZombie.state == State.PURSUING_BLINDLY) ||
+                    (otherZombie.state == State.TRACKING))
                 {
                     if (leaderZombie == null)
                     {
                         leaderZombie = hit.transform.gameObject;
                         leaderZombieScript = leaderZombie.GetComponent<Zombie>();
-                        leaderZombieScript.addFollower(gameObject);
-                        state = State.TRACKING_BLINDLY;
-                    }
 
-                    // Return direction to look at non-idle zombie
-                    return gameObject.transform.rotation * Quaternion.Euler(0, 0, -90f) *
-                           Quaternion.Euler(0, 0, AngleTowardsPosition(hit.transform.position));
+                        if (isWorthFollowing(leaderZombieScript))
+                        {
+                            leaderZombieScript.addFollower(gameObject);
+                            state = State.TRACKING_BLINDLY;
+
+                            // Return direction to look at non-idle zombie
+                            return gameObject.transform.rotation * Quaternion.Euler(0, 0, -90f) *
+                                        Quaternion.Euler(0, 0, AngleTowardsPosition(hit.transform.position));
+                        }
+                    }
+                }
+            }
+            // Did we hit a destructible wall?
+            else if (hit.transform.parent != null)
+            {
+                if (hit.transform.parent.gameObject.tag == "DestructibleBlock")
+                {
+                    // Keep track of the block we hit, and go to DESTRUCTION state
+                    trackedBlock = hit.transform.gameObject;
+                    state = State.DESTRUCTION;
+
+                    // Return angle required to look at tracked block
+                    return gameObject.transform.rotation * Quaternion.Euler(0, 0, -90f) * Quaternion.Euler(0, 0, highestAngle);
                 }
             }
 
@@ -454,7 +510,6 @@ public class Zombie : MonoBehaviour
                 if (maxTrackingBlindlySeconds <= (Time.time - trackingBlindlyEntryTime))
                 {
                     // Time is up, drop all followers and back to idle state
-                    Debug.Log("TIME IS UP!");
                     dropFollowers();
                     break;
                 }
@@ -488,7 +543,9 @@ public class Zombie : MonoBehaviour
                 // (Uncomment for debugging)
                 Debug.DrawLine(gameObject.transform.position, buddyHit.point, Color.red);
 
-                if (leaderZombie == null)
+                if ((leaderZombie == null) ||
+                    (buddyHit.transform == null)||
+                    (buddyHit.transform.gameObject == null))
                 {
                     // Buddy zombie was destroyed/killed, drop followers and go back to idle state.;
                     dropFollowers();
@@ -502,7 +559,9 @@ public class Zombie : MonoBehaviour
                     if (buddyHit.transform.gameObject.tag == "Zombie")
                     {
                         Zombie otherZombie = buddyHit.transform.gameObject.GetComponent<Zombie>();
-                        if (otherZombie.state != State.IDLE)
+                        if ((otherZombie.state == State.PURSUING) ||
+                            (otherZombie.state == State.PURSUING_BLINDLY) ||
+                            (otherZombie.state == State.TRACKING))
                         {
                             // Make this guy our new leader
                             leaderZombieScript.removeFollower(gameObject);
@@ -558,6 +617,41 @@ public class Zombie : MonoBehaviour
                 }
 
                 LookTowardsPosition(lastSeenPlayerPos);
+                MoveForwards(FAST_SPEED);
+                break;
+
+            case State.DESTRUCTION:
+                if (RaycastHitType.PLAYER_LOS == hitType)
+                {
+                    state = State.PURSUING;
+                    break;
+                }
+                else if (RaycastHitType.PURSUING_LOS == hitType)
+                {
+                    state = State.PURSUING_BLINDLY;
+                    break;
+                }
+                else if (RaycastHitType.TRACKING_LOS == hitType)
+                {
+                    state = State.TRACKING_BLINDLY;
+                    break;
+                }
+
+                if (trackedBlock == null)
+                {
+                    state = State.IDLE;
+                    break;
+                }
+
+                if (Vector2.Distance(trackedBlock.transform.position, gameObject.transform.position) < 1.0f)
+                {
+                    Destroy(trackedBlock);
+                    trackedBlock = null;
+                    state = State.IDLE;
+                    break;
+                }
+
+                LookTowardsPosition(trackedBlock.transform.position);
                 MoveForwards(FAST_SPEED);
                 break;
 
