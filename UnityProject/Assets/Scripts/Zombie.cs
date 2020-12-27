@@ -9,6 +9,41 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+
+/* The result of a single ray cast by RaycastSweep180() */
+public class RaycastSweepHit
+{
+    public RaycastHit2D hit;   // Result of the raycat
+    public float angle;        // Angle of the raycast, relative to player rotation
+
+    public RaycastSweepHit(RaycastHit2D raycastHit, float raycastAngle)
+    {
+        hit = raycastHit;
+        angle = raycastAngle;
+    }
+}
+
+/* The result returned by ProcessRaycastSweep. Holds the information taken from
+ * an array of RaycastSweepHit objects, needed to determine the zombie's next action
+ * when in the IDLE state. */
+public class ProcessedRaycastSweep
+{
+    public GameObject nearestZombie;        // Nearest follow-able zombie
+    public Zombie nearestZombieScript;      // Nearest follow-able zombie script
+    public GameObject nearestDestructible;  // Nearest destructible block
+    public float highestDistanceAngle;      // Angle of raycast that had the highest distance
+    public float lowestDistanceAngle;       // Angle of raycast that had the lowest distance
+
+    public ProcessedRaycastSweep(GameObject zombie, Zombie zombieScript, GameObject destructible, float highest, float lowest)
+    {
+        nearestZombie = zombie;
+        nearestZombieScript = zombieScript;
+        nearestDestructible = destructible;
+        highestDistanceAngle = highest;
+        lowestDistanceAngle = lowest;
+    }
+}
+
 public class Zombie : MonoBehaviour
 {
     /* Enumeration of possible states a zombie can be in */
@@ -19,7 +54,8 @@ public class Zombie : MonoBehaviour
         PURSUING_BLINDLY, // Following a zombie that has line-of-sight to the player
         TRACKING_BLINDLY, // Following a zombie that is in the TRACKING state
         DESTRUCTION,      // Destroying something the player built
-        TRACKING          // Moving toward player's last seen position
+        TRACKING,         // Moving toward player's last seen position
+        INVALID_STATE     // No state
     }
 
 
@@ -170,11 +206,6 @@ public class Zombie : MonoBehaviour
 
         for (int hops = 0; hops < maxHopsToLeader + 1; hops++)
         {
-            if (currZombie.leaderZombieScript == null)
-            {
-                return false;
-            }
-
             if ((currZombie.state == State.PURSUING) ||
                 (currZombie.state == State.PURSUING_BLINDLY) ||
                 (currZombie.state == State.TRACKING))
@@ -182,6 +213,11 @@ public class Zombie : MonoBehaviour
                 /* Found a zombie that is actually following/tracking something within
                  * N hops, this zombie is worth following. */
                 return true;
+            }
+
+            if (currZombie.leaderZombieScript == null)
+            {
+                return false;
             }
             else
             {
@@ -230,38 +266,14 @@ public class Zombie : MonoBehaviour
         em.enabled = false;
     }
 
-    /* Used when a zombie is in the State.IDLE state, to do multiple raycasts in a 180
-     * degree sweep in front of the zombie, and calculate the rotation vector required to
-     * make the zombie look in the desired direction. The desired direction depends on what the rays
-     * we cast collided with:
-     *
-     * Collided with nothing, or with static scenery: zombie will turn to face in the direction
-     * of whichever raycast had the highest distance, and remain in the IDLE state.
-     *
-     * Collided with another zombie in any state except IDLE: zombie will turn to
-     * face the other zombie, and start following the other zombie by entering the
-     * TRACKING_BLINDLY state */
-    Quaternion RaycastSweepForLookDirection()
+    /* Performs a 180 degree sweep of multiple raycasts in front of the zombie,
+     * returning an array of RaycastSweepHit objects */
+    RaycastSweepHit[] RaycastSweep180(int numCasts = 9)
     {
-        // Return cached copy until time is up for the next sweep
-        if ((Time.time - lastRaycastSweepTime) < secondsBetweenRaycastSweeps)
-        {
-            return idleLookDirection;
-        }
-
-        lastRaycastSweepTime = Time.time;
-
-        // Total number of raycasts to do in the sweep
-        const int numCasts = 9;
+        List<RaycastSweepHit> hits = new List<RaycastSweepHit>();
 
         // Number of degrees to increment rotation by after each cast
         float degreesIncrement = 180f / (float) numCasts;
-
-        // Highest cast distance we've seen so far
-        float highestDistance = 0f;
-
-        // Rotation angle offset corresponding with highest cast distance
-        float highestAngle = 0f;
 
         // Temporarily disable boxcollider so we don't hit ourselves with the raycast
         boxCollider.enabled = false;
@@ -273,62 +285,101 @@ public class Zombie : MonoBehaviour
             Vector3 castDir = Quaternion.Euler(0, 0, angleOffset) * (-transform.up);
 
             // Do the raycast
-            RaycastHit2D hit = Physics2D.Raycast(gameObject.transform.position, castDir);
+            RaycastSweepHit hit = new RaycastSweepHit(Physics2D.Raycast(gameObject.transform.position, castDir), angleOffset);
+            hits.Add(hit);
 
             // Draw a line showing the raycast, uncomment for debugging
-            Debug.DrawLine(gameObject.transform.position, hit.point, Color.green);
-
-            if ("Zombie" == hit.transform.gameObject.tag)
-            {
-                Zombie otherZombie = hit.transform.gameObject.GetComponent<Zombie>();
-                if ((otherZombie.state == State.PURSUING) ||
-                    (otherZombie.state == State.PURSUING_BLINDLY) ||
-                    (otherZombie.state == State.TRACKING))
-                {
-                    if (leaderZombie == null)
-                    {
-                        leaderZombie = hit.transform.gameObject;
-                        leaderZombieScript = leaderZombie.GetComponent<Zombie>();
-
-                        if (isWorthFollowing(leaderZombieScript))
-                        {
-                            leaderZombieScript.addFollower(gameObject);
-                            state = State.TRACKING_BLINDLY;
-
-                            // Return direction to look at non-idle zombie
-                            return gameObject.transform.rotation * Quaternion.Euler(0, 0, -90f) *
-                                        Quaternion.Euler(0, 0, AngleTowardsPosition(hit.transform.position));
-                        }
-                    }
-                }
-            }
-            // Did we hit a destructible wall?
-            else if (hit.transform.parent != null)
-            {
-                if (hit.transform.parent.gameObject.tag == "DestructibleBlock")
-                {
-                    // Keep track of the block we hit, and go to DESTRUCTION state
-                    trackedBlock = hit.transform.gameObject;
-                    state = State.DESTRUCTION;
-
-                    // Return angle required to look at tracked block
-                    return gameObject.transform.rotation * Quaternion.Euler(0, 0, -90f) * Quaternion.Euler(0, 0, highestAngle);
-                }
-            }
-
-            if (hit.distance > highestDistance)
-            {
-                highestDistance = hit.distance;
-                highestAngle = angleOffset;
-            }
+            Debug.DrawLine(gameObject.transform.position, hit.hit.point, Color.green);
         }
 
         // Re-enable boxcollider
         boxCollider.enabled = true;
 
-        // Calculate angle of rotation to face direction of cast with the highest distance
-        idleLookDirection = gameObject.transform.rotation * Quaternion.Euler(0, 0, -90f) * Quaternion.Euler(0, 0, highestAngle);
-        return idleLookDirection;
+        // Convert results to array and return
+        return hits.ToArray();
+    }
+
+    /* Processes an array of RaycastSweepHit objects into a single ProcessedRaycastSweep
+     * object containing only the information needed to determine next actions. */
+    ProcessedRaycastSweep ProcessRaycastSweep(RaycastSweepHit[] hits)
+    {
+        // Highest cast distance we've seen so far
+        float highestDistance = 0.0f;
+
+        // Rotation angle offset corresponding with highest cast distance
+        float highestAngle = 0.0f;
+
+        // Shortes cast distance we've seen so far
+        float shortestDistance = float.MaxValue;
+
+        // Rotation angle offset corresponding with highest cast distance
+        float shortestAngle = 0.0f;
+
+        // Nearest follow-able zombie
+        RaycastSweepHit nearestZombieHit = null;
+        GameObject nearestZombie = null;
+
+        // Nearest follow-able zombie script
+        Zombie nearestZombieScript = null;
+
+        // nearest destructible object
+        RaycastSweepHit nearestDestructibleHit = null;
+        GameObject nearestDestructible = null;
+
+        foreach (RaycastSweepHit hit in hits)
+        {
+            // Did we hit a zombie?
+            if ("Zombie" == hit.hit.transform.gameObject.tag)
+            {
+                // Is it in a state that means it is following the player?
+                Zombie otherZombie = hit.hit.transform.gameObject.GetComponent<Zombie>();
+                if ((otherZombie.state == State.PURSUING) ||
+                    (otherZombie.state == State.PURSUING_BLINDLY) ||
+                    (otherZombie.state == State.TRACKING) ||
+                    (otherZombie.state == State.TRACKING_BLINDLY))
+                {
+                    if (nearestZombieHit == null || (hit.hit.distance < nearestZombieHit.hit.distance))
+                    {
+                        if (isWorthFollowing(otherZombie))
+                        {
+                            nearestZombieHit = hit;
+                            nearestZombie = hit.hit.transform.gameObject;
+                        }
+                    }
+                }
+            }
+            // Did we hit a destructible wall?
+            else if (hit.hit.transform.parent != null)
+            {
+                if (hit.hit.transform.parent.gameObject.tag == "DestructibleBlock")
+                {
+                    if ((nearestDestructibleHit == null) || (hit.hit.distance < nearestDestructibleHit.hit.distance))
+                    {
+                        nearestDestructibleHit = hit;
+                        nearestDestructible = hit.hit.transform.gameObject;
+                    }
+                }
+            }
+
+            // Keep track of shortest and longest raycast distance
+            if (hit.hit.distance > highestDistance)
+            {
+                highestDistance = hit.hit.distance;
+                highestAngle = hit.angle;
+            }
+            if (hit.hit.distance < shortestDistance)
+            {
+                shortestDistance = hit.hit.distance;
+                shortestAngle = hit.angle;
+            }
+        }
+
+        if (nearestZombie != null)
+        {
+            nearestZombieScript = nearestZombie.GetComponent<Zombie>();
+        }
+
+        return new ProcessedRaycastSweep(nearestZombie, nearestZombieScript, nearestDestructible, highestAngle, shortestAngle);
     }
 
     RaycastHitType TranslatePlayerLineCast(RaycastHit2D hit)
@@ -643,7 +694,7 @@ public class Zombie : MonoBehaviour
                     break;
                 }
 
-                if (Vector2.Distance(trackedBlock.transform.position, gameObject.transform.position) < 1.0f)
+                if (Vector2.Distance(trackedBlock.transform.position, gameObject.transform.position) < 0.5f)
                 {
                     Destroy(trackedBlock);
                     trackedBlock = null;
@@ -672,8 +723,42 @@ public class Zombie : MonoBehaviour
                     break;
                 }
 
+                // If time is up, do another sweep
+                if ((Time.time - lastRaycastSweepTime) >= secondsBetweenRaycastSweeps)
+                {
+                    lastRaycastSweepTime = Time.time;
+                    RaycastSweepHit[] hits = RaycastSweep180();
+                    ProcessedRaycastSweep res = ProcessRaycastSweep(hits);
+
+                    // Do we have a zombie worth following in view?
+                    if (res.nearestZombie != null)
+                    {
+                        // Start following this zombie
+                        leaderZombie = res.nearestZombie;
+                        leaderZombieScript = leaderZombie.GetComponent<Zombie>();
+                        leaderZombieScript.addFollower(gameObject);
+                        state = State.TRACKING_BLINDLY;
+                        break;
+                    }
+                    // Do we have a destructible block in view
+                    else if (res.nearestDestructible != null)
+                    {
+                        // Keep track of the block we hit, and go to DESTRUCTION state
+                        trackedBlock = res.nearestDestructible;
+                        state = State.DESTRUCTION;
+                        break;
+                    }
+                    // Nothing of interest in view, face towards direction of raycast with highest distance
+                    else
+                    {
+                        idleLookDirection = gameObject.transform.rotation *
+                                            Quaternion.Euler(0, 0, -90f) *
+                                            Quaternion.Euler(0, 0, res.highestDistanceAngle);
+                    }
+                }
+
                 gameObject.transform.rotation = Quaternion.Lerp(gameObject.transform.rotation,
-                                                                RaycastSweepForLookDirection(),
+                                                                idleLookDirection,
                                                                 0.05f);
                 MoveForwards(SLOW_SPEED);
                 break;
