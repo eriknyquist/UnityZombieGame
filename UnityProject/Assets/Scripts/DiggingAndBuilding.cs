@@ -9,7 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Building : MonoBehaviour
+public class DiggingAndBuilding : MonoBehaviour
 {
     /* Possible states for building blocks */
     enum State
@@ -27,14 +27,26 @@ public class Building : MonoBehaviour
     /* Game camera */
     public Camera cam;
 
+    float digChunkRadius = 0.35f;
+    float distanceFromDigger = 0.4f;
+
     Color outOfRangeColor = Color.red;
     Color inRangeColor = Color.green;
+
+    int blocksAvailable = 0;
+    int blocksPerBuild = 16;
 
     State state = State.START;
     GameObject placingWall = null;
     DestructibleBlock placingWallScript = null;
     Color origColor;
     bool inRange = false;
+    BoxCollider2D playerCollider;
+
+    void Start()
+    {
+        playerCollider = gameObject.GetComponent<BoxCollider2D>();
+    }
 
     GameObject SpawnWall(Vector3 position)
     {
@@ -44,15 +56,54 @@ public class Building : MonoBehaviour
         return Instantiate(wallPrefab, position, Quaternion.identity);
     }
 
-    bool inBuildingRange(Vector3 mousePos)
+    bool canPlaceWall(Vector3 mousePos)
     {
+        // Do we have enough blocks to build a wall?
+        if (blocksAvailable < blocksPerBuild)
+        {
+            // Nope
+            return false;
+        }
+
+        // Is the mouse position close enough to the player sprite?
         float distance = Vector3.Distance(gameObject.transform.position, mousePos);
-        return (distance <= maxBuildDistance);
+        return ((distance <= maxBuildDistance) && (distance >= 0.5f));
+    }
+
+    int digChunk(float radius)
+    {
+        int destroyed = 0;
+
+        Vector2 origin = gameObject.transform.position + gameObject.transform.up * distanceFromDigger;
+        RaycastHit2D[] hits = Physics2D.CircleCastAll(origin, radius, gameObject.transform.up, 0.0f);
+
+        foreach (RaycastHit2D hit in hits)
+        {
+            // Did we get any destructible blocks within the radius?
+            if (hit.transform.parent != null)
+            {
+                if (hit.transform.parent.gameObject.tag == "DestructibleBlock")
+                {
+                    // Destroy the block
+                    Destroy(hit.transform.gameObject);
+                    destroyed += 1;
+                }
+            }
+        }
+
+        return destroyed;
     }
 
     // Update is called once per frame
     void Update()
     {
+        // First, check if the dig button has been hit
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            blocksAvailable += digChunk(digChunkRadius);
+        }
+
+        // Now, run the state machine for building
         switch (state)
         {
             case State.START:
@@ -64,11 +115,12 @@ public class Building : MonoBehaviour
                     placingWall = SpawnWall(mousePos);
 
                     placingWallScript = placingWall.GetComponent<DestructibleBlock>();
+                    blocksPerBuild = placingWallScript.numSubBlocks;
                     origColor = placingWallScript.getColor();
                     Color newColor = inRangeColor;
 
                     /* If not in building range, make sure to set sprite color appropriately */
-                    inRange = inBuildingRange(mousePos);
+                    inRange = canPlaceWall(mousePos);
                     if (!inRange)
                     {
                         newColor = outOfRangeColor;
@@ -91,7 +143,7 @@ public class Building : MonoBehaviour
                 placingWall.transform.position = newPos;
 
                 /* Set sprite color based on whether current mouse position is in building range */
-                bool newInRange = inBuildingRange(newPos);
+                bool newInRange = canPlaceWall(newPos);
                 if (newInRange != inRange)
                 {
                     inRange = newInRange;
@@ -118,6 +170,7 @@ public class Building : MonoBehaviour
                         Color newColor = origColor;
                         origColor.a = 1.0f;
                         placingWallScript.setColor(newColor);
+                        blocksAvailable -= blocksPerBuild;
                     }
                     else
                     {

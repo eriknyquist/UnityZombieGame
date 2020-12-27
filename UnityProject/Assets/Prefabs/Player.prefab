@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 2491993152316216354}
   - component: {fileID: 2491993152316216353}
   - component: {fileID: 6111847424939889751}
+  - component: {fileID: 6479556969896538906}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -52,6 +53,8 @@ SpriteRenderer:
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -120,9 +123,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a9b7cad99567f3e4fb53baa2f84a3e9c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 5
+  walkSpeed: 1
+  sprintSpeed: 10
   rb: {fileID: 2491993152316216358}
   cam: {fileID: 0}
+  sprintTimeSecs: 2
+  sprintRechargeTimeSecs: 4
 --- !u!114 &2491993152316216355
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -139,6 +145,8 @@ MonoBehaviour:
   bulletPrefab: {fileID: 8070647292017001554, guid: a10e38ff11852174593359d84b8a2513,
     type: 3}
   bulletForce: 40
+  gunshotReverbSound: {fileID: 0}
+  gunshotSounds: []
 --- !u!61 &2491993152316216354
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -179,6 +187,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   coolOffSeconds: 1
   coolOffFlashDelay: 0.1
+  ammoPickupSound: {fileID: 0}
+  healthPickupSound: {fileID: 0}
+  playerHitSound: {fileID: 0}
 --- !u!82 &6111847424939889751
 AudioSource:
   m_ObjectHideFlags: 0
@@ -275,6 +286,21 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &6479556969896538906
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2491993152316216344}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27f0eaae1a93b654c8f1707f8d87aa76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  wallPrefab: {fileID: 3636888009964901838, guid: 71d8e152141148943b7aae7ebe12e35a,
+    type: 3}
+  cam: {fileID: 0}
 --- !u!1 &2491993153355625179
 GameObject:
   m_ObjectHideFlags: 0

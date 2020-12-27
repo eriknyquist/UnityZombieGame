@@ -25,6 +25,9 @@ public class Shooting : MonoBehaviour
     public AudioClip gunshotReverbSound;
     public List<AudioClip> gunshotSounds = new List<AudioClip>();
 
+    const float timeBetweenBullets = 0.1f;
+
+    float lastBulletTime = 0.0f;
     int shotSoundIndex = 0;
     AudioSource audioSource;
     PlayerHUD playerHUD;
@@ -55,6 +58,12 @@ public class Shooting : MonoBehaviour
             return;
         }
 
+        if ((Time.time - lastBulletTime) < timeBetweenBullets)
+        {
+            return;
+        }
+
+        lastBulletTime = Time.time;
         AudioClip shotSound = gunshotSounds[shotSoundIndex];
         shotSoundIndex = (shotSoundIndex + 1) % gunshotSounds.Count;
 
@@ -77,7 +86,7 @@ public class Shooting : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
-            InvokeRepeating("FireBullet", 0, 0.1f);
+            InvokeRepeating("FireBullet", 0, timeBetweenBullets + 0.02f);
         }
         else if (Input.GetMouseButtonUp(0))
         {

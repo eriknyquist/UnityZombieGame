@@ -51,7 +51,7 @@ public class Zombie : MonoBehaviour
     public const float secondsBetweenRaycastSweeps = 0.5f;
 
     // Max. time a zombie is allowed to stay in the TRACKING_BLINDLY state
-    public float maxTrackingBlindlySeconds = 10.0f;
+    public float maxTrackingBlindlySeconds = 5.0f;
 
     // List of Zombies currently following this zombie
     public List<GameObject> followers = new List<GameObject>();
@@ -165,7 +165,7 @@ public class Zombie : MonoBehaviour
 
     bool isWorthFollowing(Zombie otherZombie)
     {
-        const int maxHopsToLeader = 6;
+        const int maxHopsToLeader = 16;
         Zombie currZombie = otherZombie;
 
         for (int hops = 0; hops < maxHopsToLeader + 1; hops++)

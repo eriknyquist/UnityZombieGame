@@ -129,7 +129,7 @@ MonoBehaviour:
   hp: 2
   state: 0
   killed: 0
-  maxTrackingBlindlySeconds: 10
+  maxTrackingBlindlySeconds: 5
   followers: []
   leaderZombie: {fileID: 0}
   leaderZombieScript: {fileID: 0}

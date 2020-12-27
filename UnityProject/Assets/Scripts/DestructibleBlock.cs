@@ -12,6 +12,8 @@ using UnityEngine;
 
 public class DestructibleBlock : MonoBehaviour
 {
+    public int numSubBlocks;
+
     /*
      * Disable the box collider of all child blocks
      */
