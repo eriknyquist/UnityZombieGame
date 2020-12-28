@@ -42,10 +42,13 @@ public class DiggingAndBuilding : MonoBehaviour
     Color origColor;
     bool inRange = false;
     BoxCollider2D playerCollider;
+    PlayerHUD playerHUD;
 
     void Start()
     {
         playerCollider = gameObject.GetComponent<BoxCollider2D>();
+        GameObject hud = GameObject.FindGameObjectWithTag("PlayerHUD");
+        playerHUD = hud.GetComponent<PlayerHUD>();
     }
 
     GameObject SpawnWall(Vector3 position)
@@ -101,6 +104,7 @@ public class DiggingAndBuilding : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space))
         {
             blocksAvailable += digChunk(digChunkRadius);
+            playerHUD.blockCounter.SetCount(blocksAvailable / blocksPerBuild);
         }
 
         // Now, run the state machine for building
@@ -171,6 +175,7 @@ public class DiggingAndBuilding : MonoBehaviour
                         origColor.a = 1.0f;
                         placingWallScript.setColor(newColor);
                         blocksAvailable -= blocksPerBuild;
+                        playerHUD.blockCounter.SetCount(blocksAvailable / blocksPerBuild);
                     }
                     else
                     {

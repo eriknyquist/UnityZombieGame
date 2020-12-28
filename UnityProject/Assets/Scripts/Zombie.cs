@@ -87,7 +87,7 @@ public class Zombie : MonoBehaviour
     public const float secondsBetweenRaycastSweeps = 0.5f;
 
     // Max. time a zombie is allowed to stay in the TRACKING_BLINDLY state
-    public float maxTrackingBlindlySeconds = 5.0f;
+    public float maxTrackingBlindlySeconds = 10.0f;
 
     // List of Zombies currently following this zombie
     public List<GameObject> followers = new List<GameObject>();
@@ -203,6 +203,14 @@ public class Zombie : MonoBehaviour
     {
         const int maxHopsToLeader = 16;
         Zombie currZombie = otherZombie;
+
+        if ((otherZombie.state != State.PURSUING) &&
+            (otherZombie.state != State.PURSUING_BLINDLY) &&
+            (otherZombie.state != State.TRACKING) &&
+            (otherZombie.state != State.TRACKING_BLINDLY))
+        {
+            return false;
+        }
 
         for (int hops = 0; hops < maxHopsToLeader + 1; hops++)
         {
@@ -333,18 +341,12 @@ public class Zombie : MonoBehaviour
             {
                 // Is it in a state that means it is following the player?
                 Zombie otherZombie = hit.hit.transform.gameObject.GetComponent<Zombie>();
-                if ((otherZombie.state == State.PURSUING) ||
-                    (otherZombie.state == State.PURSUING_BLINDLY) ||
-                    (otherZombie.state == State.TRACKING) ||
-                    (otherZombie.state == State.TRACKING_BLINDLY))
+                if (nearestZombieHit == null || (hit.hit.distance < nearestZombieHit.hit.distance))
                 {
-                    if (nearestZombieHit == null || (hit.hit.distance < nearestZombieHit.hit.distance))
+                    if (isWorthFollowing(otherZombie))
                     {
-                        if (isWorthFollowing(otherZombie))
-                        {
-                            nearestZombieHit = hit;
-                            nearestZombie = hit.hit.transform.gameObject;
-                        }
+                        nearestZombieHit = hit;
+                        nearestZombie = hit.hit.transform.gameObject;
                     }
                 }
             }
@@ -408,10 +410,13 @@ public class Zombie : MonoBehaviour
                 {
                     leaderZombie = hit.transform.gameObject;
                     leaderZombieScript = leaderZombie.GetComponent<Zombie>();
-                    leaderZombieScript.addFollower(gameObject);
-                }
 
-                return RaycastHitType.TRACKING_LOS;
+                    if (isWorthFollowing(leaderZombieScript))
+                    {
+                        leaderZombieScript.addFollower(gameObject);
+                        return RaycastHitType.TRACKING_LOS;
+                    }
+                }
             }
         }
 
@@ -610,9 +615,7 @@ public class Zombie : MonoBehaviour
                     if (buddyHit.transform.gameObject.tag == "Zombie")
                     {
                         Zombie otherZombie = buddyHit.transform.gameObject.GetComponent<Zombie>();
-                        if ((otherZombie.state == State.PURSUING) ||
-                            (otherZombie.state == State.PURSUING_BLINDLY) ||
-                            (otherZombie.state == State.TRACKING))
+                        if (isWorthFollowing(otherZombie))
                         {
                             // Make this guy our new leader
                             leaderZombieScript.removeFollower(gameObject);

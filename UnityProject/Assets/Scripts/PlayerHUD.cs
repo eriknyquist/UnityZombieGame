@@ -15,10 +15,11 @@ public class PlayerHUD : MonoBehaviour
     public SprintBar sprintBar;
     public ScoreBoard scoreBoard;
     public AmmoCounter ammoCounter;
+    public BlockCounter blockCounter;
     public GameObject player;
 
     // Offset from player's position
-    Vector3 offset = new Vector3(0.0f, -3.8f, 0.0f);
+    Vector3 offset = new Vector3(0.0f, -4.0f, 0.0f);
 
     Vector3 pivotOffset;
 
