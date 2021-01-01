@@ -12,6 +12,7 @@ using UnityEngine;
 
 public class DestructibleBlock : MonoBehaviour
 {
+    public float subBlockSize = 0.125f;
     public int numSubBlocks;
 
     /*

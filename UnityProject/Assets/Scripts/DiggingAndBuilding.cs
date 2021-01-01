@@ -35,6 +35,7 @@ public class DiggingAndBuilding : MonoBehaviour
 
     int blocksAvailable = 0;
     int blocksPerBuild = 16;
+    float subBlockSize = 0.0f;
 
     State state = State.START;
     GameObject placingWall = null;
@@ -116,10 +117,12 @@ public class DiggingAndBuilding : MonoBehaviour
                     /* Build button was pressed. Find out whene the mouse cursor is,
                     and spawn our building block prefab there. */
                     Vector3 mousePos = cam.ScreenToWorldPoint(Input.mousePosition);
+                    mousePos.z = 0;
                     placingWall = SpawnWall(mousePos);
 
                     placingWallScript = placingWall.GetComponent<DestructibleBlock>();
                     blocksPerBuild = placingWallScript.numSubBlocks;
+                    subBlockSize = placingWallScript.subBlockSize;
                     origColor = placingWallScript.getColor();
                     Color newColor = inRangeColor;
 
@@ -129,6 +132,12 @@ public class DiggingAndBuilding : MonoBehaviour
                     {
                         newColor = outOfRangeColor;
                     }
+
+                    /* Move the block sprite to snap to sub-block size */
+                    Vector3 mPos = placingWall.transform.position;
+                    mPos.x = Mathf.Round(mPos.x / subBlockSize) * subBlockSize;
+                    mPos.y = Mathf.Round(mPos.y / subBlockSize) * subBlockSize;
+                    placingWall.transform.position = mPos;
 
                     /* Collider is disabled and sprite is translucent until build button is released */
                     newColor.a = 0.5f;
@@ -143,6 +152,8 @@ public class DiggingAndBuilding : MonoBehaviour
             case State.PLACING:
                 /* Move the building block prefab to keep it under the current mouse position */
                 Vector3 newPos = cam.ScreenToWorldPoint(Input.mousePosition);
+                newPos.x = Mathf.Round(newPos.x / subBlockSize) * subBlockSize;
+                newPos.y = Mathf.Round(newPos.y / subBlockSize) * subBlockSize;
                 newPos.z = 0;
                 placingWall.transform.position = newPos;
 

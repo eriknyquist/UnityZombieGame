@@ -125,6 +125,8 @@ public class Zombie : MonoBehaviour
     RaycastHit2D playerHit;
     ParticleSystem blood;
     Quaternion idleLookDirection;
+    float lastMovementTime = 0.0f;
+    Vector3 lastPosition;
 
     public RaycastHitType hitType = RaycastHitType.NO_LOS;
 
@@ -451,13 +453,25 @@ public class Zombie : MonoBehaviour
         boxCollider = gameObject.GetComponent<BoxCollider2D>();
 
         killed = false;
+        lastPosition = gameObject.transform.position;
     }
 
 
     // Update is called once per frame
     void Update()
     {
+        float now = Time.time;
+        float distance = Vector3.Distance(lastPosition, gameObject.transform.position);
 
+        if (distance > 0.5f)
+        {
+            lastMovementTime = now;
+        }
+    }
+
+    bool isStuck()
+    {
+        return ((Time.time - lastMovementTime) >= 1.0f);
     }
 
     // Calculate angle of rotation required to make zombie look at given position
@@ -697,7 +711,7 @@ public class Zombie : MonoBehaviour
                     break;
                 }
 
-                if (Vector2.Distance(trackedBlock.transform.position, gameObject.transform.position) < 0.5f)
+                if (isStuck() || (Vector2.Distance(trackedBlock.transform.position, gameObject.transform.position) < 0.5f))
                 {
                     Destroy(trackedBlock);
                     trackedBlock = null;

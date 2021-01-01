@@ -611,6 +611,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2491993152316216357, guid: 7343c374f93c3dd4fb556df1a083d6a1,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
     - target: {fileID: 2491993152316216359, guid: 7343c374f93c3dd4fb556df1a083d6a1,
         type: 3}
       propertyPath: cam
@@ -2422,7 +2427,7 @@ MonoBehaviour:
   m_RequiresOpaqueTextureOption: 2
   m_CameraType: 0
   m_Cameras: []
-  m_RendererIndex: -1
+  m_RendererIndex: 0
   m_VolumeLayerMask:
     serializedVersion: 2
     m_Bits: 1
@@ -5285,6 +5290,11 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 1544760955}
     m_Modifications:
+    - target: {fileID: 2038247154705752737, guid: b0b31d77035c7614e91ebc5afe7150b4,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 790b727a6dac0d442bc6e81dff7defba, type: 2}
     - target: {fileID: 4794199291054047109, guid: b0b31d77035c7614e91ebc5afe7150b4,
         type: 3}
       propertyPath: m_RootOrder
